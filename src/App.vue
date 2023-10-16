@@ -4,9 +4,15 @@
   import ListTasks from './components/ListTasks.vue';
   import InputTask from './components/InputTask.vue';
   import ListEmpty from './components/ListEmpty.vue';
+  import ViewTask from './components/ViewTask.vue';
+  import { useTaskStore } from './store/tasks/tasks';
+  import { storeToRefs } from 'pinia';
 
-  const title: Ref<string> = ref('Tasks')
-  const tasks: Ref<Task[]> = ref([])
+  const taskModal = ref();
+  const taskStore = useTaskStore();
+  const { tasks } = storeToRefs(taskStore);
+  const title: Ref<string> = ref('Tasks');
+  const taskView: Ref<number> = ref(0);
 
   function saveTask(task: string) {
     if (!task) return;
@@ -14,6 +20,51 @@
 
     tasks.value.push({id: tasks.value.length + 1, title: task, date: new Date(), isCompleted: false, isProgress: false })
   }
+
+
+  function viewTask(taskId: number) {
+    if (taskId < 0 || taskId === undefined) return;
+
+    taskView.value = taskId
+    if (taskModal.value !== null) taskModal.value.showOrClose();
+  }
+
+  function startTask(taskId: number) {
+    if (taskId < 0 || taskId === undefined) return;
+
+    const task: Task | undefined = searchTaskById(taskId);
+
+    if (task) {
+      task.isProgress = true;
+      task.isCompleted = false;
+    }
+  }
+
+  function completedTask(taskId: number) {
+    if (taskId < 0 || taskId === undefined) return;
+
+    const task: Task | undefined = searchTaskById(taskId);
+
+    if (task) {
+      task.isProgress = false; 
+      task.isCompleted = true;
+    }
+  }
+
+  function removeTask(taskId: number) {
+    if (taskId < 0 || taskId === undefined) return;
+
+    try {
+      tasks.value.splice(tasks.value.findIndex((task: Task) => task.id === taskId), 1);
+    } catch (error) {
+      alert('Não foi possível remover a task!')
+    }
+  }
+
+  function searchTaskById(taskId: number): Task | undefined {
+    return tasks.value.find((task: Task) => task.id === taskId);
+  }
+
 </script>
 
 <template>
@@ -28,8 +79,16 @@
     </h1>
     <div class="p-4 box-border">
       <InputTask @saveTask="(task) => saveTask(task)"/>
-      <ListTasks :tasks="tasks" v-if="tasks.length > 0"/>
+      <ListTasks 
+        v-if="tasks.length > 0"
+        :tasks="tasks" 
+        @viewTask="(id: number) => viewTask(id)"
+        @startTast="(id: number) => startTask(id)"
+        @removeTask="(id: number) => removeTask(id)"
+        @completedTask="(id: number) => completedTask(id)"
+      />
       <ListEmpty v-else/>
     </div>
   </div>
+  <ViewTask :taskId="taskView" ref="taskModal"/>
 </template>
